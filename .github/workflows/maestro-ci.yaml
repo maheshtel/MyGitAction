@@ -1,0 +1,39 @@
+name: Maestro Regression CI
+on: [push, pull_request]
+
+jobs:
+  maestro-tests:
+    runs-on: macos-latest # macOS is recommended for both Android and iOS stability
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Run Android Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          script: |
+            # 1. Install your app
+            maestro install your-app-path.apk
+            # 2. Run the suite (using '.' to ensure config.yaml is loaded)
+            maestro test --format junit --output report.xml .
+
+      - name: Upload Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maestro-report
+          path: report.xml
